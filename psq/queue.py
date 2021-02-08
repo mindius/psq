@@ -29,13 +29,20 @@ from .utils import dumps, measure_time, unpickle, UnpickleError
 
 logger = logging.getLogger(__name__)
 
-PUBSUB_OBJECT_PREFIX = 'psq'
+PUBSUB_OBJECT_PREFIX = "psq"
 
 
 class Queue(object):
-    def __init__(self, publisher_client, subscriber_client, project,
-                 name='default', storage=None, extra_context=None,
-                 asynchronous=True):
+    def __init__(
+        self,
+        publisher_client,
+        subscriber_client,
+        project,
+        name="default",
+        storage=None,
+        extra_context=None,
+        asynchronous=True,
+    ):
         self._async = asynchronous
         self.name = name
         self.project = project
@@ -50,18 +57,18 @@ class Queue(object):
         self.extra_context = extra_context if extra_context else dummy_context
 
     def _get_topic_path(self):
-        topic_name = '{}-{}'.format(PUBSUB_OBJECT_PREFIX, self.name)
+        topic_name = "{}-{}".format(PUBSUB_OBJECT_PREFIX, self.name)
         return self.publisher_client.topic_path(self.project, topic_name)
 
     def _get_or_create_topic(self):
         topic_path = self._get_topic_path()
 
         try:
-            self.publisher_client.get_topic(topic_path)
+            self.publisher_client.get_topic(topic=topic_path)
         except google.cloud.exceptions.NotFound:
             logger.info("Creating topic {}".format(topic_path))
             try:
-                self.publisher_client.create_topic(topic_path)
+                self.publisher_client.create_topic(name=topic_path)
             except google.cloud.exceptions.Conflict:
                 # Another process created the topic before us, ignore.
                 pass
@@ -72,19 +79,19 @@ class Queue(object):
         """Workers all share the same subscription so that tasks are
         distributed across all workers."""
         topic_path = self._get_topic_path()
-        subscription_name = '{}-{}-shared'.format(
-            PUBSUB_OBJECT_PREFIX, self.name)
+        subscription_name = "{}-{}-shared".format(PUBSUB_OBJECT_PREFIX, self.name)
         subscription_path = self.subscriber_client.subscription_path(
-            self.project, subscription_name)
+            self.project, subscription_name
+        )
 
         try:
             self.subscriber_client.get_subscription(subscription_path)
         except google.cloud.exceptions.NotFound:
-            logger.info("Creating shared subscription {}".format(
-                subscription_name))
+            logger.info("Creating shared subscription {}".format(subscription_name))
             try:
                 self.subscriber_client.create_subscription(
-                    subscription_path, topic=topic_path)
+                    subscription_path, topic=topic_path
+                )
             except google.cloud.exceptions.Conflict:
                 # Another worker created the subscription before us, ignore.
                 pass
@@ -107,12 +114,10 @@ class Queue(object):
 
         if self._async:
             self.publisher_client.publish(self.topic_path, data=data)
-            logger.info('Task {} queued.'.format(task.id))
+            logger.info("Task {} queued.".format(task.id))
         else:
             unpickled_task = unpickle(data)
-            logger.info(
-                'Executing task {} synchronously.'.format(unpickled_task.id)
-            )
+            logger.info("Executing task {} synchronously.".format(unpickled_task.id))
             with measure_time() as summary, self.queue_context():
                 unpickled_task.execute(queue=self)
                 summary(unpickled_task.summary())
@@ -127,16 +132,16 @@ class Queue(object):
             task = unpickle(message.data)
             task_callback(task)
         except UnpickleError:
-            logger.exception('Failed to unpickle task {}.'.format(message))
+            logger.exception("Failed to unpickle task {}.".format(message))
 
     def listen(self, callback):
         if not self.subscription:
             self.subscription = self._get_or_create_subscription()
 
-        message_callback = functools.partial(
-            self._pubsub_message_callback, callback)
+        message_callback = functools.partial(self._pubsub_message_callback, callback)
         return self.subscriber_client.subscribe(
-            self.subscription, callback=message_callback)
+            self.subscription, callback=message_callback
+        )
 
     def cleanup(self):
         """Does nothing for this queue, but other queues types may use this to
