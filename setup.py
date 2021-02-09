@@ -64,8 +64,8 @@ setup(
     packages=['psq'],
 
     install_requires=[
-        'google-cloud-pubsub>=2.2.0, <=2.9.0',
-        'google-cloud-datastore>=1.0.0,<=2.9.0',
+        'google-cloud-pubsub>=2.2.0,<3.0.0',
+        'google-cloud-datastore>=1.0.0,<3.0.0',
         'werkzeug>=0.10.0,<=1.1.0',
         'click>=4.0',
         'colorlog>=2.6.0,<3.0.0'],
